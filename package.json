@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "LOG_LEVEL=debug bun --watch .",
-    "start": "bun . | pino-pretty"
+    "start": "LOG_LEVEL=debug bun . | pino-pretty"
   },
   "devDependencies": {
     "@types/bun": "latest",
