@@ -15,6 +15,7 @@ export const Env = z.object({
   LOG_LEVEL: z
     .enum(["debug", "info", "warn", "error", "fatal"])
     .default("info"),
+  NODE_ENV: z.enum(["development", "production", "test"]).default("production"),
 });
 export const env = Env.parse(process.env);
 
@@ -57,3 +58,8 @@ export async function getChannelCreator(
   });
   return channelInfo?.channel?.creator || null;
 }
+
+export const CHANNEL_COMMAND_NAME =
+  env.NODE_ENV === "development" ? "/dev-channel" : "/channel";
+export const HERE_COMMAND_NAME =
+  env.NODE_ENV === "development" ? "/dev-here" : "/here";

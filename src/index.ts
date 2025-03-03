@@ -1,5 +1,12 @@
 import { App, type SlackCommandMiddlewareArgs } from "@slack/bolt";
-import { env, logger, getChannelManagers, getChannelCreator } from "./util";
+import {
+  env,
+  logger,
+  getChannelManagers,
+  getChannelCreator,
+  CHANNEL_COMMAND_NAME,
+  HERE_COMMAND_NAME,
+} from "./util";
 import { db, adminsTable, webhooksTable } from "./db";
 import { and, eq } from "drizzle-orm";
 import type Slack from "@slack/bolt";
@@ -20,6 +27,7 @@ async function sendPing(
   type: "channel" | "here",
   message: string,
   userId: string,
+  channelId: string,
   webhookUrl: string,
   client: Slack.webApi.WebClient
 ) {
@@ -33,7 +41,9 @@ async function sendPing(
   const user = await client.users.info({ user: userId });
   const displayName =
     user?.user?.profile?.display_name || user?.user?.name || "<unknown>";
-  const avatar = user?.user?.profile?.image_original;
+  const avatar =
+    user?.user?.profile?.image_original || user?.user?.profile?.image_512;
+  //   const avatar = "https://skyfall.dev/_astro/logo.BZI6fuo4_1AndRm.webp";
 
   const payload = {
     text: finalMessage,
@@ -49,13 +59,18 @@ async function sendPing(
       },
     ],
   };
+  console.log(payload);
 
-  await fetch(webhookUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
+  //   await fetch(webhookUrl, {
+  //     method: "POST",
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //     },
+  //     body: JSON.stringify(payload),
+  //   });
+  await client.chat.postMessage({
+    channel: channelId,
+    ...payload,
   });
 }
 
@@ -107,11 +122,18 @@ async function pingCommand(
     return;
   }
 
-  await sendPing(pingType, message, userId, webhook.webhookUrl, client);
+  await sendPing(
+    pingType,
+    message,
+    userId,
+    channelId,
+    webhook.webhookUrl,
+    client
+  );
 }
 
-app.command("/channel", pingCommand.bind(null, "channel"));
-app.command("/here", pingCommand.bind(null, "here"));
+app.command(CHANNEL_COMMAND_NAME, pingCommand.bind(null, "channel"));
+app.command(HERE_COMMAND_NAME, pingCommand.bind(null, "here"));
 
 app.view("add-webhook-modal", async ({ ack, view, client }) => {
   await ack();
@@ -137,7 +159,7 @@ app.view("add-webhook-modal", async ({ ack, view, client }) => {
     webhookUrl,
   });
 
-  await sendPing(type, message, userId, webhookUrl, client);
+  await sendPing(type, message, userId, channelId, webhookUrl, client);
 });
 
 await app.start();

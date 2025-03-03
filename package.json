@@ -4,8 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "LOG_LEVEL=debug bun --watch .",
-    "start": "LOG_LEVEL=debug bun . | pino-pretty"
+    "dev": "LOG_LEVEL=debug NODE_ENV=development bun --watch .",
+    "start": "LOG_LEVEL=debug NODE_ENV=production bun . | pino-pretty"
   },
   "devDependencies": {
     "@types/bun": "latest",
