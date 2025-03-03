@@ -1,5 +1,6 @@
 import { z } from "zod";
 import pino from "pino";
+import type Slack from "@slack/bolt";
 
 export const Env = z.object({
   TURSO_CONNECTION_URL: z.string(),
@@ -45,4 +46,14 @@ export async function getChannelManagers(channelId: string): Promise<string[]> {
 
   if (!json.ok) return [];
   return json.role_assignments[0]?.users || [];
+}
+
+export async function getChannelCreator(
+  channelId: string,
+  client: Slack.webApi.WebClient
+): Promise<string | null> {
+  const channelInfo = await client.conversations.info({
+    channel: channelId,
+  });
+  return channelInfo?.channel?.creator || null;
 }

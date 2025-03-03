@@ -1,7 +1,8 @@
 import { App, type SlackCommandMiddlewareArgs } from "@slack/bolt";
-import { env, logger, getChannelManagers } from "./util";
+import { env, logger, getChannelManagers, getChannelCreator } from "./util";
 import { db, adminsTable, webhooksTable } from "./db";
 import { and, eq } from "drizzle-orm";
+import type Slack from "@slack/bolt";
 import buildWebhookModal from "./webhookModal";
 
 const app = new App({
@@ -9,6 +10,11 @@ const app = new App({
   token: env.SLACK_BOT_TOKEN,
   socketMode: true,
 });
+const botId = (
+  await app.client.auth.test({
+    token: env.SLACK_BOT_TOKEN,
+  })
+).user_id;
 
 async function sendPing(
   type: "channel" | "here",
@@ -46,8 +52,14 @@ async function sendPing(
 
 async function pingCommand(
   pingType: "channel" | "here",
-  // @ts-expect-error `client` is there but the types are private
-  { command, ack, respond, payload, client, body }: SlackCommandMiddlewareArgs
+  {
+    command,
+    ack,
+    respond,
+    payload,
+    client,
+    body,
+  }: SlackCommandMiddlewareArgs & { client: Slack.webApi.WebClient }
 ) {
   await ack();
   const { channel_id: channelId, user_id: userId } = command;
@@ -59,9 +71,13 @@ async function pingCommand(
     .from(adminsTable)
     .where(eq(adminsTable.userId, userId));
   const channelManagers = await getChannelManagers(channelId);
-  if (!admin && !channelManagers.includes(userId)) {
+  if (
+    !admin &&
+    !channelManagers.includes(userId) &&
+    (await getChannelCreator(channelId, client)) !== userId
+  ) {
     await respond({
-      text: ":tw_warning: *You need to be a channel manager to use this command.*",
+      text: `:tw_warning: *You need to be a channel manager to use this command.*\nIf this is a private channel, you'll need to add <@${botId}> to the channel.`,
       response_type: "ephemeral",
     });
     return;
