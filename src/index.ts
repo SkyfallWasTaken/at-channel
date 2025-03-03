@@ -7,10 +7,9 @@ import {
   CHANNEL_COMMAND_NAME,
   HERE_COMMAND_NAME,
 } from "./util";
-import { db, adminsTable, webhooksTable } from "./db";
-import { and, eq } from "drizzle-orm";
+import { db, adminsTable } from "./db";
+import { eq } from "drizzle-orm";
 import type Slack from "@slack/bolt";
-import buildWebhookModal from "./webhookModal";
 
 const app = new App({
   appToken: env.SLACK_APP_TOKEN,
@@ -28,7 +27,6 @@ async function sendPing(
   message: string,
   userId: string,
   channelId: string,
-  webhookUrl: string,
   client: Slack.webApi.WebClient
 ) {
   let finalMessage: string;
@@ -43,7 +41,6 @@ async function sendPing(
     user?.user?.profile?.display_name || user?.user?.name || "<unknown>";
   const avatar =
     user?.user?.profile?.image_original || user?.user?.profile?.image_512;
-  //   const avatar = "https://skyfall.dev/_astro/logo.BZI6fuo4_1AndRm.webp";
 
   const payload = {
     text: finalMessage,
@@ -59,15 +56,7 @@ async function sendPing(
       },
     ],
   };
-  console.log(payload);
 
-  //   await fetch(webhookUrl, {
-  //     method: "POST",
-  //     headers: {
-  //       "Content-Type": "application/json",
-  //     },
-  //     body: JSON.stringify(payload),
-  //   });
   await client.chat.postMessage({
     channel: channelId,
     ...payload,
@@ -82,7 +71,6 @@ async function pingCommand(
     respond,
     payload,
     client,
-    body,
   }: SlackCommandMiddlewareArgs & { client: Slack.webApi.WebClient }
 ) {
   await ack();
@@ -107,60 +95,11 @@ async function pingCommand(
     return;
   }
 
-  const [webhook] = await db
-    .select()
-    .from(webhooksTable)
-    .where(
-      and(
-        eq(webhooksTable.userId, userId),
-        eq(webhooksTable.channelId, channelId)
-      )
-    );
-  if (!webhook) {
-    const modal = buildWebhookModal(userId, channelId, message, pingType);
-    await client.views.open({ trigger_id: body.trigger_id, view: modal });
-    return;
-  }
-
-  await sendPing(
-    pingType,
-    message,
-    userId,
-    channelId,
-    webhook.webhookUrl,
-    client
-  );
+  await sendPing(pingType, message, userId, channelId, client);
 }
 
 app.command(CHANNEL_COMMAND_NAME, pingCommand.bind(null, "channel"));
 app.command(HERE_COMMAND_NAME, pingCommand.bind(null, "here"));
-
-app.view("add-webhook-modal", async ({ ack, view, client }) => {
-  await ack();
-
-  const {
-    userId,
-    channelId,
-    message,
-    type,
-  }: {
-    userId: string;
-    message: string;
-    channelId: string;
-    type: "channel" | "here";
-  } = JSON.parse(view.private_metadata);
-  // biome-ignore lint/style/noNonNullAssertion: Always set
-  const webhookUrl = view.state.values.webhook_url_input.webhook_url.value!;
-
-  logger.debug(`Adding webhook for ${userId}: ${webhookUrl}`);
-  await db.insert(webhooksTable).values({
-    userId,
-    channelId,
-    webhookUrl,
-  });
-
-  await sendPing(type, message, userId, channelId, webhookUrl, client);
-});
 
 await app.start();
 
