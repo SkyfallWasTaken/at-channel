@@ -19,7 +19,9 @@ const botId = (
 async function sendPing(
   type: "channel" | "here",
   message: string,
-  webhookUrl: string
+  userId: string,
+  webhookUrl: string,
+  client: Slack.webApi.WebClient
 ) {
   let finalMessage: string;
   if (message.includes(`@${type}`)) {
@@ -28,8 +30,15 @@ async function sendPing(
     finalMessage = `@${type} ${message}`;
   }
 
+  const user = await client.users.info({ user: userId });
+  const displayName =
+    user?.user?.profile?.display_name || user?.user?.name || "<unknown>";
+  const avatar = user?.user?.profile?.image_original;
+
   const payload = {
     text: finalMessage,
+    username: displayName,
+    icon_url: avatar,
     blocks: [
       {
         type: "section",
@@ -98,13 +107,13 @@ async function pingCommand(
     return;
   }
 
-  await sendPing(pingType, message, webhook.webhookUrl);
+  await sendPing(pingType, message, userId, webhook.webhookUrl, client);
 }
 
 app.command("/channel", pingCommand.bind(null, "channel"));
 app.command("/here", pingCommand.bind(null, "here"));
 
-app.view("add-webhook-modal", async ({ ack, view }) => {
+app.view("add-webhook-modal", async ({ ack, view, client }) => {
   await ack();
 
   const {
@@ -128,7 +137,7 @@ app.view("add-webhook-modal", async ({ ack, view }) => {
     webhookUrl,
   });
 
-  await sendPing(type, message, webhookUrl);
+  await sendPing(type, message, userId, webhookUrl, client);
 });
 
 await app.start();
