@@ -27,7 +27,14 @@
   },
   "oauth_config": {
     "scopes": {
-      "bot": ["commands", "chat:write", "users:read", "channels:read"]
+      "bot": [
+        "commands",
+        "chat:write",
+        "chat:write.customize",
+        "chat:write.public",
+        "users:read",
+        "channels:read"
+      ]
     }
   },
   "settings": {
