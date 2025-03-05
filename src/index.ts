@@ -106,6 +106,7 @@ async function pingCommand(
 
     await sendPing(pingType, message, userId, channelId, client);
   } catch (e) {
+    console.log(e);
     logger.error(`${rayId}: Failed to send ping: ${e}`);
     await respond({
       text: generateErrorMessage(
