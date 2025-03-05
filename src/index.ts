@@ -4,8 +4,10 @@ import {
   logger,
   getChannelManagers,
   getChannelCreator,
+  generateRandomString,
   CHANNEL_COMMAND_NAME,
   HERE_COMMAND_NAME,
+  generateErrorMessage,
 } from "./util";
 import { db, adminsTable } from "./db";
 import { eq } from "drizzle-orm";
@@ -27,6 +29,7 @@ async function sendPing(
   message: string,
   userId: string,
   channelId: string,
+  rayId: string,
   client: Slack.webApi.WebClient
 ) {
   let finalMessage: string;
@@ -57,10 +60,25 @@ async function sendPing(
     ],
   };
 
-  await client.chat.postMessage({
-    channel: channelId,
-    ...payload,
-  });
+  try {
+    await client.chat.postMessage({
+      channel: channelId,
+      ...payload,
+    });
+  } catch (e) {
+    logger.error(`${rayId}: Failed to send ping: ${e}`);
+    await client.chat.postMessage({
+      channel: userId,
+      text: generateErrorMessage(
+        rayId,
+        type,
+        message,
+        userId,
+        botId as string,
+        e as string
+      ),
+    });
+  }
 }
 
 async function pingCommand(
@@ -74,28 +92,49 @@ async function pingCommand(
   }: SlackCommandMiddlewareArgs & { client: Slack.webApi.WebClient }
 ) {
   await ack();
+  const rayId = generateRandomString(12);
   const { channel_id: channelId, user_id: userId } = command;
   const { text: message } = payload;
-  logger.debug(`${userId} invoked /${pingType} on ${channelId}: ${message}`);
+  logger.debug(
+    `${rayId}: ${userId} invoked /${pingType} on ${channelId}: ${message}`
+  );
 
-  const [admin] = await db
-    .select()
-    .from(adminsTable)
-    .where(eq(adminsTable.userId, userId));
-  const channelManagers = await getChannelManagers(channelId);
-  if (
-    !admin &&
-    !channelManagers.includes(userId) &&
-    (await getChannelCreator(channelId, client)) !== userId
-  ) {
-    await respond({
-      text: `:tw_warning: *You need to be a channel manager to use this command.*\nIf this is a private channel, you'll need to add <@${botId}> to the channel.`,
-      response_type: "ephemeral",
+  try {
+    const [admin] = await db
+      .select()
+      .from(adminsTable)
+      .where(eq(adminsTable.userId, userId));
+    const channelManagers = await getChannelManagers(channelId);
+    if (
+      !admin &&
+      !channelManagers.includes(userId) &&
+      (await getChannelCreator(channelId, client)) !== userId
+    ) {
+      await respond({
+        text: `:tw_warning: *You need to be a channel manager to use this command.*\nIf this is a private channel, you'll need to add <@${botId}> to the channel.`,
+        response_type: "ephemeral",
+      });
+      logger.debug(
+        `${rayId}: Failed to send ping: user ${userId} not admin or channel manager`
+      );
+      return;
+    }
+
+    await sendPing(pingType, message, userId, channelId, rayId, client);
+  } catch (e) {
+    logger.error(`${rayId}: Failed to send ping: ${e}`);
+    await client.chat.postMessage({
+      channel: userId,
+      text: generateErrorMessage(
+        rayId,
+        pingType,
+        message,
+        userId,
+        botId as string,
+        e as string
+      ),
     });
-    return;
   }
-
-  await sendPing(pingType, message, userId, channelId, client);
 }
 
 app.command(CHANNEL_COMMAND_NAME, pingCommand.bind(null, "channel"));

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import pino from "pino";
 import type Slack from "@slack/bolt";
+import { stripIndents } from "common-tags";
 
 export const Env = z.object({
   TURSO_CONNECTION_URL: z.string(),
@@ -57,6 +58,37 @@ export async function getChannelCreator(
     channel: channelId,
   });
   return channelInfo?.channel?.creator || null;
+}
+
+export function generateRandomString(length: number) {
+  const chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+export function generateErrorMessage(
+  rayId: string,
+  type: "channel" | "here",
+  message: string,
+  userId: string,
+  botId: string,
+  error: string
+) {
+  return stripIndents`
+  :wave: *Hey <@${userId}}>!* Unfortunately, we weren't able to send your @${type} ping with message \`${message}\`.\n
+  If you're running the command in a private channel, you'll need to add me (<@${botId}>) to that channel and try the command again.
+
+  If not, please DM <@U059VC0UDEU> so this can be fixed! Include the Ray ID (\`${rayId}\`) in the message.
+
+  Error was:
+  \`\`\`
+  ${error}
+  \`\`\`
+  `.trim();
 }
 
 export const CHANNEL_COMMAND_NAME =

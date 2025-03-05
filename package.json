@@ -13,11 +13,13 @@
     "pino-pretty": "^13.0.0"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^5.8.2"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",
     "@slack/bolt": "^4.2.1",
+    "@types/common-tags": "^1.8.4",
+    "common-tags": "^1.8.2",
     "drizzle-orm": "^0.40.0",
     "pino": "^9.6.0",
     "zod": "^3.24.2"
