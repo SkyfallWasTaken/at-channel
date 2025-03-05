@@ -60,25 +60,10 @@ async function sendPing(
     ],
   };
 
-  try {
-    await client.chat.postMessage({
-      channel: channelId,
-      ...payload,
-    });
-  } catch (e) {
-    logger.error(`${rayId}: Failed to send ping: ${e}`);
-    await client.chat.postMessage({
-      channel: userId,
-      text: generateErrorMessage(
-        rayId,
-        type,
-        message,
-        userId,
-        botId as string,
-        e as string
-      ),
-    });
-  }
+  await client.chat.postMessage({
+    channel: channelId,
+    ...payload,
+  });
 }
 
 async function pingCommand(
@@ -123,8 +108,7 @@ async function pingCommand(
     await sendPing(pingType, message, userId, channelId, rayId, client);
   } catch (e) {
     logger.error(`${rayId}: Failed to send ping: ${e}`);
-    await client.chat.postMessage({
-      channel: userId,
+    await respond({
       text: generateErrorMessage(
         rayId,
         pingType,
@@ -133,6 +117,7 @@ async function pingCommand(
         botId as string,
         e as string
       ),
+      response_type: "ephemeral",
     });
   }
 }
