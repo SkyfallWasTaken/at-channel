@@ -29,7 +29,6 @@ async function sendPing(
   message: string,
   userId: string,
   channelId: string,
-  rayId: string,
   client: Slack.webApi.WebClient
 ) {
   let finalMessage: string;
@@ -105,7 +104,7 @@ async function pingCommand(
       return;
     }
 
-    await sendPing(pingType, message, userId, channelId, rayId, client);
+    await sendPing(pingType, message, userId, channelId, client);
   } catch (e) {
     logger.error(`${rayId}: Failed to send ping: ${e}`);
     await respond({
