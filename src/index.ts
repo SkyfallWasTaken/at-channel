@@ -108,17 +108,26 @@ async function pingCommand(
   } catch (e) {
     console.log(e);
     logger.error(`${rayId}: Failed to send ping: ${e}`);
-    await respond({
-      text: generateErrorMessage(
-        rayId,
-        pingType,
-        message,
-        userId,
-        botId as string,
-        e as string
-      ),
-      response_type: "ephemeral",
-    });
+    const errorMessage = generateErrorMessage(
+      rayId,
+      pingType,
+      message,
+      userId,
+      botId as string,
+      e as string
+    );
+    try {
+      await respond({
+        text: errorMessage,
+        response_type: "ephemeral",
+      });
+    } catch {
+      // Above might not work for private channels
+      await client.chat.postMessage({
+        channel: userId,
+        text: errorMessage,
+      });
+    }
   }
 }
 
