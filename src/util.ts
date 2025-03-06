@@ -78,6 +78,7 @@ export function generateErrorMessage(
   botId: string,
   error: string
 ) {
+  logger.error(`Generating error message for ray ID ${rayId}: ${error}`);
   return stripIndents`
   :tw_warning: *Hey <@${userId}>!* Unfortunately, I wasn't able to send your @${type} ping with message \`${message}\`.\n
   If you're running the command in a private channel, you'll need to add me (<@${botId}>) to the channel and try the command again.
