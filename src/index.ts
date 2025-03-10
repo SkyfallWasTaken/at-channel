@@ -78,36 +78,6 @@ async function sendPing(
   });
 }
 
-async function updatePing(
-  message: string,
-  type: "channel" | "here",
-  ts: string,
-  channelId: string,
-  client: Slack.webApi.WebClient
-) {
-  let finalMessage: string;
-  if (message.includes(`@${type}`)) {
-    finalMessage = message;
-  } else {
-    finalMessage = `@${type} ${message}`;
-  }
-
-  await client.chat.update({
-    channel: channelId,
-    ts,
-    text: finalMessage,
-    blocks: [
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: finalMessage,
-        },
-      },
-    ],
-  });
-}
-
 async function pingCommand(
   pingType: "channel" | "here",
   {
