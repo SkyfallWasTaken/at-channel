@@ -10,6 +10,14 @@
       "display_name": "at-channel",
       "always_online": false
     },
+    "shortcuts": [
+      {
+        "name": "Delete this message",
+        "type": "message",
+        "callback_id": "delete_ping",
+        "description": "Deletes this ping. Only available if you sent this ping."
+      }
+    ],
     "slash_commands": [
       {
         "command": "/channel",

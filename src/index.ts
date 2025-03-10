@@ -7,10 +7,11 @@ import {
   generateRandomString,
   CHANNEL_COMMAND_NAME,
   HERE_COMMAND_NAME,
-  generateErrorMessage,
+  generatePingErrorMessage,
+  generateDeletePingErrorMessage,
 } from "./util";
 import { db, adminsTable, pingsTable } from "./db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type Slack from "@slack/bolt";
 
 const app = new App({
@@ -117,7 +118,7 @@ async function pingCommand(
   } catch (e) {
     console.log(e);
     logger.error(`${rayId}: Failed to send ping: ${e}`);
-    const errorMessage = generateErrorMessage(
+    const errorMessage = generatePingErrorMessage(
       rayId,
       pingType,
       message,
@@ -125,20 +126,67 @@ async function pingCommand(
       botId as string,
       e
     );
+    await respond({
+      text: errorMessage,
+      response_type: "ephemeral",
+    });
+  }
+}
+
+app.shortcut(
+  { callback_id: "delete_ping", type: "message_action" },
+  async ({ shortcut, ack, respond, client }) => {
+    await ack();
+    const rayId = `delete-ping-${generateRandomString(12)}`;
+    const userId = shortcut.user.id;
+    logger.debug(
+      `${rayId}: ${userId} invoked delete_ping on ${shortcut.message_ts}`
+    );
+
+    const [claim] = await db
+      .select()
+      .from(pingsTable)
+      .where(
+        and(
+          eq(pingsTable.ts, shortcut.message_ts),
+          eq(pingsTable.slackId, userId)
+        )
+      );
+
+    if (!claim) {
+      const [admin] = await db
+        .select()
+        .from(adminsTable)
+        .where(eq(adminsTable.userId, userId));
+
+      if (!admin) {
+        await respond({
+          text: ":tw_warning: *You need to be the sender of this ping to delete it.*",
+          response_type: "ephemeral",
+        });
+        logger.debug(
+          `${rayId}: Failed to delete ping: user ${userId} not sender`
+        );
+        return;
+      }
+    }
+
     try {
+      await client.chat.delete({
+        channel: shortcut.channel.id,
+        ts: shortcut.message_ts,
+      });
+      await db.delete(pingsTable).where(eq(pingsTable.ts, shortcut.message_ts));
+    } catch (e) {
+      logger.error(`${rayId}: Failed to delete ping: ${e}`);
+      const errorMessage = generateDeletePingErrorMessage(rayId, e);
       await respond({
         text: errorMessage,
         response_type: "ephemeral",
       });
-    } catch {
-      // Above might not work for private channels
-      await client.chat.postMessage({
-        channel: userId,
-        text: errorMessage,
-      });
     }
   }
-}
+);
 
 app.command(CHANNEL_COMMAND_NAME, pingCommand.bind(null, "channel"));
 app.command(HERE_COMMAND_NAME, pingCommand.bind(null, "here"));
