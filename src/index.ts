@@ -17,6 +17,8 @@ import { and, eq } from "drizzle-orm";
 import { LogSnag } from "@logsnag/node";
 import type Slack from "@slack/bolt";
 
+// LogSnag is used to check that pings are actually getting sent
+// Ping contents aren't stored
 const logsnag = new LogSnag({
   token: env.LOGSNAG_TOKEN,
   project: env.LOGSNAG_PROJECT,
