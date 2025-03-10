@@ -75,24 +75,24 @@ export function generateErrorMessage(
   message: string,
   userId: string,
   botId: string,
-  error: string
+  error: unknown
 ) {
   logger.error(`Generating error message for ray ID ${rayId}: ${error}`);
+  const escapedMessage = message.replace("`", "`");
 
-  if (error.toString().includes("channel_not_found")) {
+  if (error?.toString?.().includes("channel_not_found")) {
     return stripIndents`
       :tw_warning: *Hey <@${userId}>!* Looks like this is a private channel, so you'll need to add me (<@${botId}>) to the channel and try the command again.
-      For reference, your message was \`${message}\`.
+      For reference, your message was \`${escapedMessage}\`.
     `.trim();
   }
 
   return stripIndents`
-    :tw_warning: *Hey <@${userId}>!* Unfortunately, I wasn't able to send your @${type} ping with message \`${message}\`.
-    If you're running the command in a private channel, you'll need to add me (<@${botId}>) to the channel and try the command again.
-    If not, please DM <@U059VC0UDEU> so this can be fixed! Make sure to include the Ray ID (\`${rayId}\`) in your message. Thank you! :yay:
+    :tw_warning: *Hey <@${userId}>!* Unfortunately, I wasn't able to send your @${type} ping with message \`${escapedMessage}\`.
+    Please DM <@U059VC0UDEU> so this can be fixed! Make sure to include the Ray ID (\`${rayId}\`) in your message. Thank you! :yay:
     Error was:
     \`\`\`
-    ${error}
+    ${error?.toString?.()}
     \`\`\`
   `.trim();
 }

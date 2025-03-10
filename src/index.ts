@@ -123,7 +123,7 @@ async function pingCommand(
       message,
       userId,
       botId as string,
-      e as string
+      e
     );
     try {
       await respond({
