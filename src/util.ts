@@ -13,6 +13,9 @@ export const Env = z.object({
   SLACK_XOXC: z.string(),
   SLACK_XOXD: z.string(),
 
+  LOGSNAG_TOKEN: z.string(),
+  LOGSNAG_PROJECT: z.string(),
+
   LOG_LEVEL: z
     .enum(["debug", "info", "warn", "error", "fatal"])
     .default("info"),

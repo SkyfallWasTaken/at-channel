@@ -14,7 +14,13 @@ import { richTextBlockToMrkdwn } from "./richText";
 import buildEditPingModal from "./editPingModal";
 import { db, adminsTable, pingsTable } from "./db";
 import { and, eq } from "drizzle-orm";
+import { LogSnag } from "@logsnag/node";
 import type Slack from "@slack/bolt";
+
+const logsnag = new LogSnag({
+  token: env.LOGSNAG_TOKEN,
+  project: env.LOGSNAG_PROJECT,
+});
 
 const app = new App({
   appToken: env.SLACK_APP_TOKEN,
@@ -71,11 +77,24 @@ async function sendPing(
     throw new Error("Failed to send ping");
   }
 
-  await db.insert(pingsTable).values({
-    slackId: userId,
-    ts: response.ts,
-    type,
-  });
+  await Promise.all([
+    db.insert(pingsTable).values({
+      slackId: userId,
+      ts: response.ts,
+      type,
+    }),
+    logsnag.track({
+      channel: "pings",
+      event: "Sent ping",
+      user_id: userId,
+      icon: "🔔",
+      tags: {
+        type,
+        channel: channelId,
+        ts: response.ts,
+      },
+    }),
+  ]);
 }
 
 async function pingCommand(
@@ -175,11 +194,24 @@ app.shortcut(
     }
 
     try {
-      await client.chat.delete({
-        channel: shortcut.channel.id,
-        ts: shortcut.message_ts,
-      });
-      await db.delete(pingsTable).where(eq(pingsTable.ts, shortcut.message_ts));
+      await Promise.all([
+        db.delete(pingsTable).where(eq(pingsTable.ts, shortcut.message_ts)),
+        client.chat.delete({
+          channel: shortcut.channel.id,
+          ts: shortcut.message_ts,
+        }),
+        logsnag.track({
+          channel: "pings",
+          event: "Deleted ping",
+          user_id: userId,
+          icon: "🔕",
+          tags: {
+            type: claim.type,
+            channel: shortcut.channel.id,
+            ts: claim.ts,
+          },
+        }),
+      ]);
     } catch (e) {
       logger.error(`${rayId}: Failed to delete ping: ${e}`);
       const errorMessage = generateDeletePingErrorMessage(rayId, e);
@@ -259,20 +291,33 @@ app.view(
     }
 
     try {
-      await client.chat.update({
-        channel: channelId,
-        ts,
-        text: finalMessage,
-        blocks: [
-          {
-            type: "section",
-            text: {
-              type: "mrkdwn",
-              text: finalMessage,
+      await Promise.all([
+        client.chat.update({
+          channel: channelId,
+          ts,
+          text: finalMessage,
+          blocks: [
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: finalMessage,
+              },
             },
+          ],
+        }),
+        logsnag.track({
+          channel: "pings",
+          event: "Edited ping",
+          user_id: body.user.id,
+          icon: "🔔",
+          tags: {
+            type,
+            channel: channelId,
+            ts,
           },
-        ],
-      });
+        }),
+      ]);
     } catch (e) {
       logger.error(`${rayId}: Failed to edit ping: ${e}`);
       const errorMessage = generatePingErrorMessage(
