@@ -5,8 +5,9 @@ export const adminsTable = sqliteTable("admins", {
 });
 
 export const pingsTable = sqliteTable("pings", {
-  slackId: text("slack_id").primaryKey(),
+  slackId: text("slack_id").notNull(),
   ts: text("ts").notNull(),
+  type: text("type", { enum: ["channel", "here"] }).notNull(),
 });
 
 export type Admin = typeof adminsTable.$inferSelect;

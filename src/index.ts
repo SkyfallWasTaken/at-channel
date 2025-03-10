@@ -10,6 +10,8 @@ import {
   generatePingErrorMessage,
   generateDeletePingErrorMessage,
 } from "./util";
+import { richTextBlockToMrkdwn } from "./richText";
+import buildEditPingModal from "./editPingModal";
 import { db, adminsTable, pingsTable } from "./db";
 import { and, eq } from "drizzle-orm";
 import type Slack from "@slack/bolt";
@@ -72,6 +74,37 @@ async function sendPing(
   await db.insert(pingsTable).values({
     slackId: userId,
     ts: response.ts,
+    type,
+  });
+}
+
+async function updatePing(
+  message: string,
+  type: "channel" | "here",
+  ts: string,
+  channelId: string,
+  client: Slack.webApi.WebClient
+) {
+  let finalMessage: string;
+  if (message.includes(`@${type}`)) {
+    finalMessage = message;
+  } else {
+    finalMessage = `@${type} ${message}`;
+  }
+
+  await client.chat.update({
+    channel: channelId,
+    ts,
+    text: finalMessage,
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: finalMessage,
+        },
+      },
+    ],
   });
 }
 
@@ -180,6 +213,106 @@ app.shortcut(
     } catch (e) {
       logger.error(`${rayId}: Failed to delete ping: ${e}`);
       const errorMessage = generateDeletePingErrorMessage(rayId, e);
+      await respond({
+        text: errorMessage,
+        response_type: "ephemeral",
+      });
+    }
+  }
+);
+app.shortcut(
+  { callback_id: "edit_ping", type: "message_action" },
+  async ({ shortcut, ack, respond, client }) => {
+    await ack();
+    const rayId = `edit-ping-${generateRandomString(12)}`;
+    const userId = shortcut.user.id;
+    logger.debug(
+      `${rayId}: ${userId} invoked edit_ping on ${shortcut.message_ts}`
+    );
+
+    const [claim] = await db
+      .select()
+      .from(pingsTable)
+      .where(
+        and(
+          eq(pingsTable.ts, shortcut.message_ts),
+          eq(pingsTable.slackId, userId)
+        )
+      );
+
+    if (!claim) {
+      const [admin] = await db
+        .select()
+        .from(adminsTable)
+        .where(eq(adminsTable.userId, userId));
+
+      if (!admin) {
+        await respond({
+          text: ":tw_warning: *You need to be the sender of this ping to edit it.*",
+          response_type: "ephemeral",
+        });
+        logger.debug(
+          `${rayId}: Failed to edit ping: user ${userId} not sender`
+        );
+        return;
+      }
+    }
+
+    const modal = buildEditPingModal(
+      shortcut.channel.id,
+      userId,
+      rayId,
+      claim.ts,
+      claim.type
+    );
+    await client.views.open({
+      trigger_id: shortcut.trigger_id,
+      view: modal,
+    });
+  }
+);
+
+app.view(
+  "edit_ping_modal_submit",
+  async ({ ack, respond, client, view, body }) => {
+    await ack();
+    const { channelId, ts, type, rayId } = JSON.parse(view.private_metadata);
+    const message = richTextBlockToMrkdwn(
+      // biome-ignore lint/style/noNonNullAssertion: Will always be there - it's a required field
+      view.state.values.message.message_input.rich_text_value!
+    );
+    let finalMessage: string;
+    if (message.includes(`@${type}`)) {
+      finalMessage = message;
+    } else {
+      finalMessage = `@${type} ${message}`;
+    }
+
+    try {
+      await client.chat.update({
+        channel: channelId,
+        ts,
+        text: finalMessage,
+        blocks: [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: finalMessage,
+            },
+          },
+        ],
+      });
+    } catch (e) {
+      logger.error(`${rayId}: Failed to edit ping: ${e}`);
+      const errorMessage = generatePingErrorMessage(
+        rayId,
+        type,
+        message,
+        body.user.id,
+        botId as string,
+        e
+      );
       await respond({
         text: errorMessage,
         response_type: "ephemeral",
