@@ -89,12 +89,13 @@ async function sendPing(
       .track({
         channel: "pings",
         event: "Sent ping",
-        user_id: userId,
+        user_id: displayName,
         icon: "🔔",
         tags: {
           type,
           channel: channelId,
           ts: response.ts as string,
+          user: userId,
         },
       })
       .catch(() => {}),
@@ -208,12 +209,13 @@ app.shortcut(
           .track({
             channel: "pings",
             event: "Deleted ping",
-            user_id: userId,
+            user_id: shortcut.user.name,
             icon: "🔕",
             tags: {
               type: claim.type,
               channel: shortcut.channel.id,
               ts: claim.ts,
+              user: userId,
             },
           })
           .catch(() => {}),
@@ -316,12 +318,13 @@ app.view(
           .track({
             channel: "pings",
             event: "Edited ping",
-            user_id: body.user.id,
+            user_id: body.user.name,
             icon: "🔔",
             tags: {
               type,
               channel: channelId,
               ts,
+              user: body.user.id
             },
           })
           .catch(() => {}),
