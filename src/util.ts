@@ -44,7 +44,6 @@ export async function getChannelManagers(channelId: string): Promise<string[]> {
   );
 
   const json = await request.json();
-  console.log(json);
 
   if (!json.ok) return [];
   return json.role_assignments[0]?.users || [];
