@@ -102,7 +102,7 @@ export function generatePingErrorMessage(
 
 export function generateDeletePingErrorMessage(rayId: string, error: unknown) {
   return stripIndents`
-  :tw_warning: Unfortunately, I wasn't able to delete your ping :pensive_hole:
+  :tw_warning: Unfortunately, I wasn't able to delete your ping :pensive-hole:
   Please DM <@U059VC0UDEU> with your Ray ID (\`${rayId}\`) and the error message below.
   \`\`\`
   ${error?.toString?.()}
