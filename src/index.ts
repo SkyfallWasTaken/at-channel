@@ -85,17 +85,19 @@ async function sendPing(
       ts: response.ts,
       type,
     }),
-    logsnag.track({
-      channel: "pings",
-      event: "Sent ping",
-      user_id: userId,
-      icon: "🔔",
-      tags: {
-        type,
-        channel: channelId,
-        ts: response.ts,
-      },
-    }),
+    logsnag
+      .track({
+        channel: "pings",
+        event: "Sent ping",
+        user_id: userId,
+        icon: "🔔",
+        tags: {
+          type,
+          channel: channelId,
+          ts: response.ts as string,
+        },
+      })
+      .catch(() => {}),
   ]);
 }
 
@@ -202,17 +204,19 @@ app.shortcut(
           channel: shortcut.channel.id,
           ts: shortcut.message_ts,
         }),
-        logsnag.track({
-          channel: "pings",
-          event: "Deleted ping",
-          user_id: userId,
-          icon: "🔕",
-          tags: {
-            type: claim.type,
-            channel: shortcut.channel.id,
-            ts: claim.ts,
-          },
-        }),
+        logsnag
+          .track({
+            channel: "pings",
+            event: "Deleted ping",
+            user_id: userId,
+            icon: "🔕",
+            tags: {
+              type: claim.type,
+              channel: shortcut.channel.id,
+              ts: claim.ts,
+            },
+          })
+          .catch(() => {}),
       ]);
     } catch (e) {
       logger.error(`${rayId}: Failed to delete ping: ${e}`);
@@ -308,17 +312,19 @@ app.view(
             },
           ],
         }),
-        logsnag.track({
-          channel: "pings",
-          event: "Edited ping",
-          user_id: body.user.id,
-          icon: "🔔",
-          tags: {
-            type,
-            channel: channelId,
-            ts,
-          },
-        }),
+        logsnag
+          .track({
+            channel: "pings",
+            event: "Edited ping",
+            user_id: body.user.id,
+            icon: "🔔",
+            tags: {
+              type,
+              channel: channelId,
+              ts,
+            },
+          })
+          .catch(() => {}),
       ]);
     } catch (e) {
       logger.error(`${rayId}: Failed to edit ping: ${e}`);
