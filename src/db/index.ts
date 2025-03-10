@@ -8,4 +8,4 @@ export const db = drizzle({
   },
 });
 
-export { adminsTable } from "./schema";
+export { adminsTable, pingsTable } from "./schema";

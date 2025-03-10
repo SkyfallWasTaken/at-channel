@@ -1,0 +1,1 @@
+ALTER TABLE `pings` DROP COLUMN `thread_ts`;

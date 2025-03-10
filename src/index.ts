@@ -9,7 +9,7 @@ import {
   HERE_COMMAND_NAME,
   generateErrorMessage,
 } from "./util";
-import { db, adminsTable } from "./db";
+import { db, adminsTable, pingsTable } from "./db";
 import { eq } from "drizzle-orm";
 import type Slack from "@slack/bolt";
 
@@ -59,9 +59,18 @@ async function sendPing(
     ],
   };
 
-  await client.chat.postMessage({
+  const response = await client.chat.postMessage({
     channel: channelId,
     ...payload,
+  });
+
+  if (!response.ts) {
+    throw new Error("Failed to send ping");
+  }
+
+  await db.insert(pingsTable).values({
+    slackId: userId,
+    ts: response.ts,
   });
 }
 
