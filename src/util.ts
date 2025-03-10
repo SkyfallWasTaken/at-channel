@@ -79,7 +79,7 @@ export function generateErrorMessage(
 ) {
   logger.error(`Generating error message for ray ID ${rayId}: ${error}`);
 
-  if (error.includes("channel_not_found")) {
+  if (error.toString().includes("channel_not_found")) {
     return stripIndents`
       :tw_warning: *Hey <@${userId}>!* Looks like this is a private channel, so you'll need to add me (<@${botId}>) to the channel and try the command again.
       For reference, your message was \`${message}\`.
