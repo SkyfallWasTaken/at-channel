@@ -116,9 +116,6 @@ async function pingCommand(
   const rayId = generateRandomString(12);
   const { channel_id: channelId, user_id: userId } = command;
   const { text: message } = payload;
-  logger.debug(
-    `${rayId}: ${userId} invoked /${pingType} on ${channelId}: ${message}`
-  );
 
   try {
     const [admin] = await db
