@@ -313,6 +313,9 @@ app.view(
     } else {
       finalMessage = `@${type} ${message}`;
     }
+    finalMessage = finalMessage
+      .replaceAll("<!channel>", "@channel")
+      .replaceAll("<!here>", "@here");
 
     try {
       await Promise.all([
