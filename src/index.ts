@@ -16,6 +16,7 @@ import { db, adminsTable, pingsTable } from "./db";
 import { and, eq } from "drizzle-orm";
 import { LogSnag } from "@logsnag/node";
 import type Slack from "@slack/bolt";
+import { stripIndents } from "common-tags";
 
 // LogSnag is used to check that pings are actually getting sent
 // Ping contents aren't stored
@@ -129,7 +130,11 @@ async function pingCommand(
       (await getChannelCreator(channelId, client)) !== userId
     ) {
       await respond({
-        text: `:tw_warning: *You need to be a channel manager to use this command.*\nIf this is a private channel, you'll need to add <@${botId}> to the channel.`,
+        text: stripIndents`
+          :tw_warning: *You need to be a channel manager to use this command.*
+          If this is a private channel, you'll need to add <@${botId}> to the channel.
+          _If this is incorrect, please DM <@U059VC0UDEU>._
+        `.trim(),
         response_type: "ephemeral",
       });
       logger.debug(
