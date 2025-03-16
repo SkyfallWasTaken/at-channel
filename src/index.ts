@@ -153,10 +153,17 @@ async function pingCommand(
       botId as string,
       e
     );
-    await respond({
-      text: errorMessage,
-      response_type: "ephemeral",
-    });
+    try {
+      await respond({
+        text: errorMessage,
+        response_type: "ephemeral",
+      });
+    } catch {
+      await client.chat.postMessage({
+        channel: userId,
+        text: errorMessage,
+      });
+    }
   }
 }
 
@@ -223,10 +230,17 @@ app.shortcut(
     } catch (e) {
       logger.error(`${rayId}: Failed to delete ping: ${e}`);
       const errorMessage = generateDeletePingErrorMessage(rayId, e);
-      await respond({
-        text: errorMessage,
-        response_type: "ephemeral",
-      });
+      try {
+        await respond({
+          text: errorMessage,
+          response_type: "ephemeral",
+        });
+      } catch {
+        await client.chat.postMessage({
+          channel: userId,
+          text: errorMessage,
+        });
+      }
     }
   }
 );
@@ -324,7 +338,7 @@ app.view(
               type,
               channel: channelId,
               ts,
-              user: body.user.id
+              user: body.user.id,
             },
           })
           .catch(() => {}),
@@ -339,10 +353,17 @@ app.view(
         botId as string,
         e
       );
-      await respond({
-        text: errorMessage,
-        response_type: "ephemeral",
-      });
+      try {
+        await respond({
+          text: errorMessage,
+          response_type: "ephemeral",
+        });
+      } catch {
+        await client.chat.postMessage({
+          channel: body.user.id,
+          text: errorMessage,
+        });
+      }
     }
   }
 );
