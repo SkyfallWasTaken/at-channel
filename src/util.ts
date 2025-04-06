@@ -28,9 +28,6 @@ export const logger = pino({
 });
 
 export async function getChannelManagers(channelId: string): Promise<string[]> {
-  const headers = new Headers();
-  headers.append("Cookie", env.SLACK_XOXD);
-
   const formData = new FormData();
   formData.append("token", env.SLACK_XOXC || "");
   formData.append("entity_id", channelId);
