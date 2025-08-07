@@ -25,11 +25,13 @@ export async function hasPerms(userId: string, channelId: string, client: Slack.
 
   const isChannelCreator = (await getChannelCreator(channelId, client)) === userId;
 
-  if ((admin != null || channelManagers.includes(userId) || isChannelCreator) && (hasPermsEntry.length === 0)) {
-    await db.insert(pingPermsTable).values({
-      slackId: userId,
-      channelId: channelId
-    });
+  if (admin != null || channelManagers.includes(userId) || isChannelCreator) {
+    if (hasPermsEntry.length === 0) {
+      await db.insert(pingPermsTable).values({
+        slackId: userId,
+        channelId: channelId
+      });
+    }
     return true;
   }
 
