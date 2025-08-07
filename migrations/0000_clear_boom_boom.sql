@@ -15,5 +15,5 @@ CREATE TABLE `pings` (
 CREATE TABLE `pingPerms` (
     `slack_id` text NOT NULL,
     `channel_id` text NOT NULL,
-    PRIMARY KEY (`slack_id`, `channel_ID`)
+    PRIMARY KEY (`slack_id`, `channel_id`)
 );
