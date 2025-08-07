@@ -1,4 +1,3 @@
-import { z } from "zod";
 import pino from "pino";
 import type Slack from "@slack/bolt";
 import { stripIndents } from "common-tags";
