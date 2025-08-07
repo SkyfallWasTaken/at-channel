@@ -134,4 +134,4 @@ export const ADD_CHANNEL_PERMS_NAME =
 export const REMOVE_CHANNEL_PERMS_NAME =
   env.NODE_ENV === "development" ? "/dev-remove-channel-perms" : "/remove-channel-perms";
 export const LIST_CHANNEL_PERMS_HAVERS_NAME =
-  env.NODE_ENV === "development" ? "/dev-list-channel-pingers" : "/list-channel-pingers"
+  env.NODE_ENV === "development" ? "/dev-list-channel-pingers" : "/list-channel-pingers";
