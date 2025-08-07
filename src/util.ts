@@ -10,6 +10,33 @@ export const logger = pino({
   level: env.LOG_LEVEL,
 });
 
+export async function hasPerms(userId: string, channelId: string, client: Slack.webApi.WebClient): Promise<boolean> {
+  const [admin] = await db
+    .select()
+    .from(adminsTable)
+    .where(eq(adminsTable.userId, userId));
+  const channelManagers = await getChannelManagers(channelId);
+  const hasPermsEntry = await db
+    .select()
+    .from(pingPermsTable)
+    .where(and(
+       eq(pingPermsTable.slackId, userId),
+       eq(pingPermsTable.channelId, channelId)
+    ));
+
+  const isChannelCreator = (await getChannelCreator(channelId, client)) === userId;
+
+  if ((admin != null || channelManagers.includes(userId) || isChannelCreator) && (hasPermsEntry.length === 0)) {
+    await db.insert(pingPermsTable).values({
+      slackId: userId,
+      channelId: channelId
+    });
+    return true;
+  }
+
+  return hasPermsEntry.length > 0;
+}
+
 export async function getChannelManagers(channelId: string): Promise<string[]> {
   const formData = new FormData();
   formData.append("token", env.SLACK_XOXC || "");
@@ -90,7 +117,22 @@ export function generateDeletePingErrorMessage(rayId: string, error: unknown) {
   `.trim();
 }
 
+export function generatePermissionChangeErrorMessage(rayId: string, error: unknown) {
+  return stripIndents`
+  :tw_warning: Unfortunately, I wasn't able to change the permissions of this channel. Please DM <@U059VC0UDEU> with your Ray ID (\`${rayId}\`) and the error message below:
+  \`\`\`
+  ${error?.toString?.()}
+  \`\`\`
+  `.trim()
+}
+
 export const CHANNEL_COMMAND_NAME =
   env.NODE_ENV === "development" ? "/dev-channel" : "/channel";
 export const HERE_COMMAND_NAME =
   env.NODE_ENV === "development" ? "/dev-here" : "/here";
+export const ADD_CHANNEL_PERMS_NAME =
+  env.NODE_ENV === "development" ? "/dev-add-channel-perms" : "/add-channel-perms"
+export const REMOVE_CHANNEL_PERMS_NAME =
+  env.NODE_ENV === "development" ? "/dev-remove-channel-perms" : "/remove-channel-perms"
+export const LIST_CHANNEL_PERMS_HAVERS_NAME =
+  env.NODE_ENV === "development" ? "/dev-list-channel-pingers" : "/list-channel-pingers"
