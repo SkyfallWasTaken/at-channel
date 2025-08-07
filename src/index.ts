@@ -375,10 +375,10 @@ async function listChannelPingersCommand({
     userIds.add(channelCreator);
   }
 
-  userIds.delete(undefined as any);
-  userIds.delete(null as any);
+  // Filter out any non-string values from userIds
+  const filteredUserIds = new Set(Array.from(userIds).filter((id): id is string => typeof id === "string"));
 
-  if (userIds.size === 0) {
+  if (filteredUserIds.size === 0) {
     await respond({
       text: ":tw_warning: No one has permission to ping in this channel.",
       response_type: "ephemeral",
