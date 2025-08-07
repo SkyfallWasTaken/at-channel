@@ -11,7 +11,9 @@ import {
   ADD_CHANNEL_PERMS_NAME,
   REMOVE_CHANNEL_PERMS_NAME,
   generatePermissionChangeErrorMessage,
-  LIST_CHANNEL_PERMS_HAVERS_NAME, getChannelManagers, getChannelCreator,
+  LIST_CHANNEL_PERMS_HAVERS_NAME,
+  getChannelManagers,
+  getChannelCreator,
 } from "./util";
 import { richTextBlockToMrkdwn } from "./richText";
 import buildEditPingModal from "./editPingModal";
