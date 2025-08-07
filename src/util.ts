@@ -130,7 +130,7 @@ export const CHANNEL_COMMAND_NAME =
 export const HERE_COMMAND_NAME =
   env.NODE_ENV === "development" ? "/dev-here" : "/here";
 export const ADD_CHANNEL_PERMS_NAME =
-  env.NODE_ENV === "development" ? "/dev-add-channel-perms" : "/add-channel-perms"
+  env.NODE_ENV === "development" ? "/dev-add-channel-perms" : "/add-channel-perms";
 export const REMOVE_CHANNEL_PERMS_NAME =
   env.NODE_ENV === "development" ? "/dev-remove-channel-perms" : "/remove-channel-perms";
 export const LIST_CHANNEL_PERMS_HAVERS_NAME =
