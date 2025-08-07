@@ -1,5 +1,5 @@
 import { drizzle } from "drizzle-orm/libsql";
-import { env } from "../util";
+import { env } from "../env";
 
 export const db = drizzle({
   connection: {
@@ -8,4 +8,4 @@ export const db = drizzle({
   },
 });
 
-export { adminsTable, pingsTable } from "./schema";
+export { adminsTable, pingsTable, pingPermsTable } from "./schema";
