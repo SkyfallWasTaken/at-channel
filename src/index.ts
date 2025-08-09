@@ -398,7 +398,7 @@ async function listChannelPingersCommand({
     });
   } catch (e) {
     console.log(e);
-    logger.error(`${rayId}: Failed to remove permissions: ${e}`);
+    logger.error(`${rayId}: Failed to list channel pingers: ${e}`);
     const errorMessage = generateListChannelPingersErrorMessage(rayId, e);
     try {
       await respond({
