@@ -13,7 +13,7 @@ import {
   generatePermissionChangeErrorMessage,
   LIST_CHANNEL_PERMS_HAVERS_NAME,
   getChannelManagers,
-  getChannelCreator,
+  getChannelCreator, generateListChannelPingersErrorMessage,
 } from "./util";
 import { richTextBlockToMrkdwn } from "./richText";
 import buildEditPingModal from "./editPingModal";
@@ -348,52 +348,70 @@ async function listChannelPingersCommand({
                                            client
                                          }: SlackCommandMiddlewareArgs & { client: Slack.webApi.WebClient }) {
   await ack();
-  const { channel_id: channelId } = command;
+  const rayId = generateRandomString(12);
+  const { channel_id: channelId, user_id: userId } = command;
 
-  const perms = await db
-    .select()
-    .from(pingPermsTable)
-    .where(eq(pingPermsTable.channelId, channelId));
+  try {
+    const perms = await db
+      .select()
+      .from(pingPermsTable)
+      .where(eq(pingPermsTable.channelId, channelId));
 
-  const admins = await db.select().from(adminsTable);
+    const admins = await db.select().from(adminsTable);
 
-  const channelCreator = await getChannelCreator(channelId, client);
+    const channelCreator = await getChannelCreator(channelId, client);
 
-  const channelManagers = await (async () => {
-    try {
-      return await getChannelManagers(channelId);
-    } catch {
-      return [];
+    const channelManagers = await (async () => {
+      try {
+        return await getChannelManagers(channelId);
+      } catch {
+        return [];
+      }
+    })();
+
+    const userIds = new Set<string>();
+    perms.forEach((p) => userIds.add(p.slackId));
+    admins.forEach((a) => userIds.add(a.userId));
+    channelManagers.forEach((id) => userIds.add(id));
+    if (channelCreator) {
+      userIds.add(channelCreator);
     }
-  })();
 
-  const userIds = new Set<string>();
-  perms.forEach((p) => userIds.add(p.slackId));
-  admins.forEach((a) => userIds.add(a.userId));
-  channelManagers.forEach((id) => userIds.add(id));
-  if (channelCreator) {
-    userIds.add(channelCreator);
-  }
+    // Filter out any non-string values from userIds
+    const filteredUserIds = new Set(Array.from(userIds).filter((id): id is string => typeof id === "string"));
 
-  // Filter out any non-string values from userIds
-  const filteredUserIds = new Set(Array.from(userIds).filter((id): id is string => typeof id === "string"));
+    if (filteredUserIds.size === 0) {
+      await respond({
+        text: ":tw_warning: No one has permission to ping in this channel.",
+        response_type: "ephemeral",
+      });
+      return;
+    }
 
-  if (filteredUserIds.size === 0) {
+    const mentions = Array.from(userIds)
+      .map((id) => `<@${id}>`)
+      .join("\n");
+
     await respond({
-      text: ":tw_warning: No one has permission to ping in this channel.",
+      text: `:tw_bell: People who can use @channel/@here in <#${channelId}>:\n${mentions}`,
       response_type: "ephemeral",
     });
-    return;
+  } catch (e) {
+    console.log(e);
+    logger.error(`${rayId}: Failed to remove permissions: ${e}`);
+    const errorMessage = generateListChannelPingersErrorMessage(rayId, e);
+    try {
+      await respond({
+        text: errorMessage,
+        response_type: "ephemeral",
+      });
+    } catch {
+      await client.chat.postMessage({
+        channel: userId,
+        text: errorMessage,
+      });
+    }
   }
-
-  const mentions = Array.from(userIds)
-    .map((id) => `<@${id}>`)
-    .join("\n");
-
-  await respond({
-    text: `:tw_bell: *People who can use @channel/@here in <#${channelId}>:*\n${mentions}`,
-    response_type: "ephemeral",
-  });
 }
 
 app.shortcut(
