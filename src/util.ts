@@ -126,6 +126,14 @@ export function generatePermissionChangeErrorMessage(rayId: string, error: unkno
   \`\`\`
   `.trim()
 }
+export function generateListChannelPingersErrorMessage(rayId: string, error: unknown) {
+  return stripIndents`
+  :tw_warning: Unfortunately, I wasn't able to list the channel pingers. Please DM <@U059VC0UDEU> with your Ray ID (\`${rayId}\`) and the error message below:
+  \`\`\`
+  ${error?.toString?.()}
+  \`\`\`
+  `.trim()
+}
 
 export const CHANNEL_COMMAND_NAME =
   env.NODE_ENV === "development" ? "/dev-channel" : "/channel";
