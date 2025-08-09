@@ -388,7 +388,7 @@ async function listChannelPingersCommand({
       return;
     }
 
-    const mentions = Array.from(userIds)
+    const mentions = Array.from(filteredUserIds)
       .map((id) => `<@${id}>`)
       .join("\n");
 
