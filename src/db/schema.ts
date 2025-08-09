@@ -1,4 +1,4 @@
-import {primaryKey, sqliteTable, text} from "drizzle-orm/sqlite-core";
+import { primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const adminsTable = sqliteTable("admins", {
   userId: text("user_id").primaryKey(),
