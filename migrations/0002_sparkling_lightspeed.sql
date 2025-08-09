@@ -1,4 +1,4 @@
-giCREATE TABLE `pingPerms` (
+CREATE TABLE `pingPerms` (
 	`slack_id` text NOT NULL,
 	`channel_id` text NOT NULL,
 	PRIMARY KEY(`slack_id`, `channel_id`)
