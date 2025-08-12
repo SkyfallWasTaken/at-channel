@@ -15,9 +15,7 @@ export const pingsTable = sqliteTable("pings", {
 export const pingPermsTable = sqliteTable("pingPerms", {
   slackId: text("slack_id").notNull(),
   channelId: text("channel_id").notNull(),
-}, (table) => [
-  primaryKey({ columns: [table.slackId, table.channelId] })
-]);
+});
 
 export type Admin = typeof adminsTable.$inferSelect;
 export type Ping = typeof pingsTable.$inferSelect;
