@@ -10,33 +10,32 @@ export const logger = pino({
 });
 
 export async function hasPerms(userId: string, channelId: string, client: Slack.webApi.WebClient): Promise<boolean> {
-  if (await hasElevatedPerms(userId, channelId, client)) {
-    return true;
-  }
-  const hasPermsEntry = await db
-    .select()
-    .from(pingPermsTable)
-    .where(and(
-      eq(pingPermsTable.slackId, userId),
-      eq(pingPermsTable.channelId, channelId)
-    ));
-  return hasPermsEntry.length > 0;
-}
-
-export async function hasElevatedPerms(userId: string, channelId: string, client: Slack.webApi.WebClient): Promise<boolean> {
   const [admin] = await db
     .select()
     .from(adminsTable)
     .where(eq(adminsTable.userId, userId));
-  if (admin != null) {
-    return true;
-  }
   const channelManagers = await getChannelManagers(channelId);
-  if (channelManagers.includes(userId)) {
+  const hasPermsEntry = await db
+    .select()
+    .from(pingPermsTable)
+    .where(and(
+       eq(pingPermsTable.slackId, userId),
+       eq(pingPermsTable.channelId, channelId)
+    ));
+
+  const isChannelCreator = (await getChannelCreator(channelId, client)) === userId;
+
+  if (admin != null || channelManagers.includes(userId) || isChannelCreator) {
+    if (hasPermsEntry.length === 0) {
+      await db.insert(pingPermsTable).values({
+        slackId: userId,
+        channelId: channelId
+      });
+    }
     return true;
   }
-  const isChannelCreator = (await getChannelCreator(channelId, client)) === userId;
-  return isChannelCreator;
+
+  return hasPermsEntry.length > 0;
 }
 
 export async function getChannelManagers(channelId: string): Promise<string[]> {
