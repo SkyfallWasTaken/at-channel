@@ -1,18 +1,23 @@
 import { App, type SlackCommandMiddlewareArgs } from "@slack/bolt";
+import { env } from "./env";
 import {
-  env,
   logger,
-  getChannelManagers,
-  getChannelCreator,
   generateRandomString,
   CHANNEL_COMMAND_NAME,
   HERE_COMMAND_NAME,
   generatePingErrorMessage,
   generateDeletePingErrorMessage,
+  hasPerms,
+  ADD_CHANNEL_PERMS_NAME,
+  REMOVE_CHANNEL_PERMS_NAME,
+  generatePermissionChangeErrorMessage,
+  LIST_CHANNEL_PERMS_HAVERS_NAME,
+  getChannelManagers,
+  getChannelCreator, generateListChannelPingersErrorMessage,
 } from "./util";
 import { richTextBlockToMrkdwn } from "./richText";
 import buildEditPingModal from "./editPingModal";
-import { db, adminsTable, pingsTable } from "./db";
+import {db, adminsTable, pingsTable, pingPermsTable} from "./db";
 import { and, eq } from "drizzle-orm";
 import { LogSnag } from "@logsnag/node";
 import type Slack from "@slack/bolt";
@@ -119,16 +124,7 @@ async function pingCommand(
   const { text: message } = payload;
 
   try {
-    const [admin] = await db
-      .select()
-      .from(adminsTable)
-      .where(eq(adminsTable.userId, userId));
-    const channelManagers = await getChannelManagers(channelId);
-    if (
-      !admin &&
-      !channelManagers.includes(userId) &&
-      (await getChannelCreator(channelId, client)) !== userId
-    ) {
+    if (!await hasPerms(userId, channelId, client)) {
       await respond({
         text: stripIndents`
           :tw_warning: *You need to be a channel manager to use this command.*
@@ -155,6 +151,255 @@ async function pingCommand(
       botId as string,
       e
     );
+    try {
+      await respond({
+        text: errorMessage,
+        response_type: "ephemeral",
+      });
+    } catch {
+      await client.chat.postMessage({
+        channel: userId,
+        text: errorMessage,
+      });
+    }
+  }
+}
+
+async function addChannelPermsCommand(
+  {
+    command,
+    ack,
+    respond,
+    payload,
+    client,
+  }: SlackCommandMiddlewareArgs & { client: Slack.webApi.WebClient }
+) {
+  await ack();
+  const rayId = generateRandomString(12);
+  const { channel_id: channelId, user_id: userId } = command;
+  const { text: target } = payload;
+  const match = target.match(/^<@([UW][A-Z0-9]+)(\|[^>]+)?>$/);
+  const targetId = match ? match[1] : null;
+
+  try {
+    if (await hasPerms(userId, channelId, client)) {
+      if (!targetId) {
+        await respond({
+          text: `:tw_warning: *This is not a valid slack user!*
+          Make sure to ping them, not just typing in their name!
+          _If this is incorrect, please DM <@U059VC0UDEU>._`,
+          response_type: "ephemeral"
+        })
+        return;
+      }
+      if (await hasPerms(targetId, channelId, client)) {
+        await respond({
+          text: `:tw_x: ${target} can already ping in <#${channelId}>! Silly goose, go try it!`
+        })
+        return;
+      } else {
+        await db.insert(pingPermsTable).values({
+          slackId: targetId,
+          channelId: channelId
+        })
+        await respond({
+          text: `:tw_white_check_mark: ${target} is now allowed to ping in <#${channelId}>`
+        })
+        
+        // Notify the target user about their new permissions
+        await client.chat.postMessage({
+          channel: targetId,
+          text: `:tw_bell: You have been granted permission to use @channel/@here in <#${channelId}> by <@${userId}>.`
+        });
+        
+        logger.info(`${userId} gave ${targetId} ping perms in ${channelId}`)
+        logsnag
+          .track({
+            channel: "perms",
+            event: "addedUser",
+            user_id: userId,
+            icon: "🔔",
+            tags: {
+              channel: channelId,
+              user_id: userId,
+              target_id: targetId,
+            },
+          })
+          .catch(() => {
+          })
+        return;
+      }
+    } else {
+      await respond({
+        text: `:tw_warning: *You need to be a channel manager to use this command.*
+          If this is a private channel, you'll need to add <@${botId}> to the channel.
+          _If this is incorrect, please DM <@U059VC0UDEU>._`,
+        response_type: "ephemeral",
+      })
+    }
+  } catch (e) {
+    console.log(e);
+    logger.error(`${rayId}: Failed to add permissions: ${e}`);
+    const errorMessage = generatePermissionChangeErrorMessage(rayId, e);
+    try {
+      await respond({
+        text: errorMessage,
+        response_type: "ephemeral",
+      });
+    } catch {
+      await client.chat.postMessage({
+        channel: userId,
+        text: errorMessage,
+      });
+    }
+  }
+}
+
+async function removeChannelPermsCommand(
+  {
+    command,
+    ack,
+    respond,
+    payload,
+    client,
+  }: SlackCommandMiddlewareArgs & { client: Slack.webApi.WebClient }
+) {
+  await ack();
+  const rayId = generateRandomString(12);
+  const { channel_id: channelId, user_id: userId } = command;
+  const { text: target } = payload;
+  const match = target.match(/^<@([UW][A-Z0-9]+)(\|[^>]+)?>$/);
+  const targetId = match ? match[1] : null;
+
+  try {
+    if (await hasPerms(userId, channelId, client)) {
+      if (!targetId) {
+        await respond({
+          text: `:tw_warning: *This is not a valid slack user!*
+          Make sure to ping them, not just typing in their name!
+          _If this is incorrect, please DM <@U059VC0UDEU>._`,
+          response_type: "ephemeral"
+        });
+        return;
+      }
+      if (await hasPerms(targetId, channelId, client)) {
+        await db.delete(pingPermsTable).where(and(eq(pingPermsTable.slackId, targetId), eq(pingPermsTable.channelId, channelId)));
+        await respond({
+          text: `:tw_white_check_mark: ${target} can no longer ping in <#${channelId}>!`
+        });
+        
+        // Notify the target user that their permissions have been revoked
+        await client.chat.postMessage({
+          channel: targetId,
+          text: `:tw_bell: Your permission to use @channel/@here in <#${channelId}> has been revoked by <@${userId}>.`
+        });
+        
+        logger.info(`${userId} removed ${targetId} ping perms in ${channelId}`);
+        logsnag
+          .track({
+            channel: "perms",
+            event: "removedUser",
+            user_id: userId,
+            icon: "🔔",
+            tags: {
+              channel: channelId,
+              user_id: userId,
+              target_id: targetId,
+            },
+          })
+          .catch(() => {});
+        return;
+      } else {
+        await respond({
+          text: `:tw_warning: ${target} does not have ping permissions in <#${channelId}>!`
+        });
+        return;
+      }
+    } else {
+      await respond({
+        text: `:tw_warning: *You need to be a channel manager to use this command.*
+          If this is a private channel, you'll need to add <@${botId}> to the channel.
+          _If this is incorrect, please DM <@U059VC0UDEU>._`,
+        response_type: "ephemeral",
+      });
+    }
+  } catch (e) {
+    console.log(e);
+    logger.error(`${rayId}: Failed to remove permissions: ${e}`);
+    const errorMessage = generatePermissionChangeErrorMessage(rayId, e);
+    try {
+      await respond({
+        text: errorMessage,
+        response_type: "ephemeral",
+      });
+    } catch {
+      await client.chat.postMessage({
+        channel: userId,
+        text: errorMessage,
+      });
+    }
+  }
+}
+
+async function listChannelPingersCommand({
+                                           command,
+                                           ack,
+                                           respond,
+                                           client
+                                         }: SlackCommandMiddlewareArgs & { client: Slack.webApi.WebClient }) {
+  await ack();
+  const rayId = generateRandomString(12);
+  const { channel_id: channelId, user_id: userId } = command;
+
+  try {
+    const perms = await db
+      .select()
+      .from(pingPermsTable)
+      .where(eq(pingPermsTable.channelId, channelId));
+
+    const admins = await db.select().from(adminsTable);
+
+    const channelCreator = await getChannelCreator(channelId, client);
+
+    const channelManagers = await (async () => {
+      try {
+        return await getChannelManagers(channelId);
+      } catch {
+        return [];
+      }
+    })();
+
+    const userIds = new Set<string>();
+    perms.forEach((p) => userIds.add(p.slackId));
+    admins.forEach((a) => userIds.add(a.userId));
+    channelManagers.forEach((id) => userIds.add(id));
+    if (channelCreator) {
+      userIds.add(channelCreator);
+    }
+
+    // Filter out any non-string values from userIds
+    const filteredUserIds = new Set(Array.from(userIds).filter((id): id is string => typeof id === "string"));
+
+    if (filteredUserIds.size === 0) {
+      await respond({
+        text: ":tw_warning: No one has permission to ping in this channel.",
+        response_type: "ephemeral",
+      });
+      return;
+    }
+
+    const mentions = Array.from(filteredUserIds)
+      .map((id) => `<@${id}>`)
+      .join("\n");
+
+    await respond({
+      text: `:tw_bell: People who can use @channel/@here in <#${channelId}>:\n${mentions}`,
+      response_type: "ephemeral",
+    });
+  } catch (e) {
+    console.log(e);
+    logger.error(`${rayId}: Failed to list channel pingers: ${e}`);
+    const errorMessage = generateListChannelPingersErrorMessage(rayId, e);
     try {
       await respond({
         text: errorMessage,
@@ -374,6 +619,9 @@ app.view(
 
 app.command(CHANNEL_COMMAND_NAME, pingCommand.bind(null, "channel"));
 app.command(HERE_COMMAND_NAME, pingCommand.bind(null, "here"));
+app.command(ADD_CHANNEL_PERMS_NAME, addChannelPermsCommand.bind(null));
+app.command(REMOVE_CHANNEL_PERMS_NAME, removeChannelPermsCommand.bind(null));
+app.command(LIST_CHANNEL_PERMS_HAVERS_NAME, listChannelPingersCommand);
 
 await app.start();
 

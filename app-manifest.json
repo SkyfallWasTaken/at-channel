@@ -3,7 +3,7 @@
     "name": "at-channel",
     "description": "Run /channel or /here to do a @channel/@here ping!",
     "background_color": "#2051d6",
-    "long_description": "Run /channel or /here to do a @channel/@here ping!\r\nYou'll need to be a channel manager to run the commands.\r\n\r\nOpen source: https://github.com/SkyfallWasTaken/at-channel\r\nMade by @skyfall."
+    "long_description": "Run /channel or /here to do a @channel/@here ping!\r\nYou'll need to be a channel manager to run the commands.\r\n\r\nClosed source: DM @skyfall for repo access\r\nMade by @skyfall.\r\n\r\n\r\nContributors:\r\n@skyfall\r\n@sahana"
   },
   "features": {
     "bot_user": {
@@ -36,6 +36,23 @@
         "description": "Does a @here ping.",
         "usage_hint": "<message>",
         "should_escape": false
+      },
+      {
+        "command": "/add-channel-perms",
+        "description": "Allows the mentioned person to ping.",
+        "usage_hint": "@person",
+        "should_escape": true
+      },
+      {
+        "command": "/remove-channel-perms",
+        "description": "Removes the mentioned person's ability ping.",
+        "usage_hint": "@person",
+        "should_escape": true
+      },
+      {
+        "command": "/list-channel-pingers",
+        "description": "Lists the people who can ping @channel/here in this channel.",
+        "should_escape": true
       }
     ]
   },
