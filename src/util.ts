@@ -1,15 +1,19 @@
 import pino from "pino";
 import type Slack from "@slack/bolt";
 import { stripIndents } from "common-tags";
-import {adminsTable, db, pingPermsTable} from "./db";
-import {and, eq} from "drizzle-orm";
-import {env} from "./env";
+import { adminsTable, db, pingPermsTable } from "./db";
+import { and, eq } from "drizzle-orm";
+import { env } from "./env";
 
 export const logger = pino({
   level: env.LOG_LEVEL,
 });
 
-export async function hasPerms(userId: string, channelId: string, client: Slack.webApi.WebClient): Promise<boolean> {
+export async function hasPerms(
+  userId: string,
+  channelId: string,
+  client: Slack.webApi.WebClient,
+): Promise<boolean> {
   const [admin] = await db
     .select()
     .from(adminsTable)
@@ -18,18 +22,21 @@ export async function hasPerms(userId: string, channelId: string, client: Slack.
   const hasPermsEntry = await db
     .select()
     .from(pingPermsTable)
-    .where(and(
-       eq(pingPermsTable.slackId, userId),
-       eq(pingPermsTable.channelId, channelId)
-    ));
+    .where(
+      and(
+        eq(pingPermsTable.slackId, userId),
+        eq(pingPermsTable.channelId, channelId),
+      ),
+    );
 
-  const isChannelCreator = (await getChannelCreator(channelId, client)) === userId;
+  const isChannelCreator =
+    (await getChannelCreator(channelId, client)) === userId;
 
   if (admin != null || channelManagers.includes(userId) || isChannelCreator) {
     if (hasPermsEntry.length === 0) {
       await db.insert(pingPermsTable).values({
         slackId: userId,
-        channelId: channelId
+        channelId: channelId,
       });
     }
     return true;
@@ -51,7 +58,7 @@ export async function getChannelManagers(channelId: string): Promise<string[]> {
       headers: {
         Cookie: `d=${encodeURIComponent(env.SLACK_XOXD)}`,
       },
-    }
+    },
   );
 
   const json = await request.json();
@@ -62,7 +69,7 @@ export async function getChannelManagers(channelId: string): Promise<string[]> {
 
 export async function getChannelCreator(
   channelId: string,
-  client: Slack.webApi.WebClient
+  client: Slack.webApi.WebClient,
 ): Promise<string | null> {
   const channelInfo = await client.conversations.info({
     channel: channelId,
@@ -86,7 +93,7 @@ export function generatePingErrorMessage(
   message: string,
   userId: string,
   botId: string,
-  error: unknown
+  error: unknown,
 ) {
   logger.error(`Generating error message for ray ID ${rayId}: ${error}`);
   const escapedMessage = message.replace("`", "`");
@@ -118,21 +125,27 @@ export function generateDeletePingErrorMessage(rayId: string, error: unknown) {
   `.trim();
 }
 
-export function generatePermissionChangeErrorMessage(rayId: string, error: unknown) {
+export function generatePermissionChangeErrorMessage(
+  rayId: string,
+  error: unknown,
+) {
   return stripIndents`
   :tw_warning: Unfortunately, I wasn't able to change the permissions of this channel. Please DM <@U059VC0UDEU> with your Ray ID (\`${rayId}\`) and the error message below:
   \`\`\`
   ${error?.toString?.()}
   \`\`\`
-  `.trim()
+  `.trim();
 }
-export function generateListChannelPingersErrorMessage(rayId: string, error: unknown) {
+export function generateListChannelPingersErrorMessage(
+  rayId: string,
+  error: unknown,
+) {
   return stripIndents`
   :tw_warning: Unfortunately, I wasn't able to list the channel pingers. Please DM <@U059VC0UDEU> with your Ray ID (\`${rayId}\`) and the error message below:
   \`\`\`
   ${error?.toString?.()}
   \`\`\`
-  `.trim()
+  `.trim();
 }
 
 export const CHANNEL_COMMAND_NAME =
@@ -140,8 +153,14 @@ export const CHANNEL_COMMAND_NAME =
 export const HERE_COMMAND_NAME =
   env.NODE_ENV === "development" ? "/dev-here" : "/here";
 export const ADD_CHANNEL_PERMS_NAME =
-  env.NODE_ENV === "development" ? "/dev-add-channel-perms" : "/add-channel-perms";
+  env.NODE_ENV === "development"
+    ? "/dev-add-channel-perms"
+    : "/add-channel-perms";
 export const REMOVE_CHANNEL_PERMS_NAME =
-  env.NODE_ENV === "development" ? "/dev-remove-channel-perms" : "/remove-channel-perms";
+  env.NODE_ENV === "development"
+    ? "/dev-remove-channel-perms"
+    : "/remove-channel-perms";
 export const LIST_CHANNEL_PERMS_HAVERS_NAME =
-  env.NODE_ENV === "development" ? "/dev-list-channel-pingers" : "/list-channel-pingers";
+  env.NODE_ENV === "development"
+    ? "/dev-list-channel-pingers"
+    : "/list-channel-pingers";

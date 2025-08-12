@@ -6,7 +6,7 @@ export const quoteMrkdwn = (text: string): string => {
 
 const applyMrkdwnStyle = (
   text: string,
-  style: Slack.types.RichTextElement["style"]
+  style: Slack.types.RichTextElement["style"],
 ): string => {
   if (!style || text.startsWith(" ") || text.endsWith(" ")) return text;
 
@@ -21,7 +21,7 @@ const applyMrkdwnStyle = (
 
 // Conversion from these docs: https://api.slack.com/reference/surfaces/formatting#advanced
 const richTextElementToMrkdwn = (
-  element: Slack.types.RichTextElement
+  element: Slack.types.RichTextElement,
 ): string => {
   switch (element.type) {
     case "broadcast":
@@ -54,7 +54,7 @@ const richTextElementToMrkdwn = (
     case "usergroup":
       return applyMrkdwnStyle(
         `<!subteam^${element.usergroup_id}>`,
-        element.style
+        element.style,
       );
     default:
       return "";
@@ -62,7 +62,7 @@ const richTextElementToMrkdwn = (
 };
 
 const richTextSectionToMrkdwn = (
-  section: Slack.types.RichTextSection
+  section: Slack.types.RichTextSection,
 ): string => {
   return section.elements.map(richTextElementToMrkdwn).join("");
 };
@@ -71,7 +71,7 @@ const richTextListToMrkdwn = (element: Slack.types.RichTextList): string => {
   let mrkdwn = "";
   for (const section of element.elements) {
     mrkdwn += `${"    ".repeat(
-      element.indent ?? 0
+      element.indent ?? 0,
     )} • ${richTextSectionToMrkdwn(section)}\n`;
   }
 
@@ -79,7 +79,7 @@ const richTextListToMrkdwn = (element: Slack.types.RichTextList): string => {
 };
 
 const richTextBlockElementToMrkdwn = (
-  element: Slack.types.RichTextBlockElement
+  element: Slack.types.RichTextBlockElement,
 ): string => {
   switch (element.type) {
     case "rich_text_list":
@@ -90,7 +90,7 @@ const richTextBlockElementToMrkdwn = (
         .join("")}\`\`\``;
     case "rich_text_quote":
       return quoteMrkdwn(
-        element.elements.map(richTextElementToMrkdwn).join("")
+        element.elements.map(richTextElementToMrkdwn).join(""),
       );
     case "rich_text_section":
       return element.elements.map(richTextElementToMrkdwn).join("");
@@ -102,7 +102,7 @@ const richTextBlockElementToMrkdwn = (
 // Slack doesn't provide tools out of the box for converting a rich text block to mrkdwn
 // See this issue: https://github.com/slackapi/bolt-js/issues/2087
 export const richTextBlockToMrkdwn = (
-  richTextBlock: Slack.types.RichTextBlock
+  richTextBlock: Slack.types.RichTextBlock,
 ) => {
   const mrkdwn = richTextBlock.elements
     .map(richTextBlockElementToMrkdwn)

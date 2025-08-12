@@ -4,13 +4,15 @@ export const adminsTable = sqliteTable("admins", {
   userId: text("user_id").primaryKey(),
 });
 
-export const pingsTable = sqliteTable("pings", {
-  slackId: text("slack_id").notNull(),
-  ts: text("ts").notNull(),
-  type: text("type", { enum: ["channel", "here"] }).notNull(),
-}, (table) => [
-  primaryKey({ columns: [table.slackId, table.ts] })
-]);
+export const pingsTable = sqliteTable(
+  "pings",
+  {
+    slackId: text("slack_id").notNull(),
+    ts: text("ts").notNull(),
+    type: text("type", { enum: ["channel", "here"] }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.slackId, table.ts] })],
+);
 
 export const pingPermsTable = sqliteTable("pingPerms", {
   slackId: text("slack_id").notNull(),

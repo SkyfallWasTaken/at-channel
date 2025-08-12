@@ -5,7 +5,7 @@ export default (
   userId: string,
   rayId: string,
   ts: string,
-  type: "channel" | "here"
+  type: "channel" | "here",
 ): Slack.types.ModalView => {
   return {
     type: "modal",

@@ -13,11 +13,12 @@ import {
   generatePermissionChangeErrorMessage,
   LIST_CHANNEL_PERMS_HAVERS_NAME,
   getChannelManagers,
-  getChannelCreator, generateListChannelPingersErrorMessage,
+  getChannelCreator,
+  generateListChannelPingersErrorMessage,
 } from "./util";
 import { richTextBlockToMrkdwn } from "./richText";
 import buildEditPingModal from "./editPingModal";
-import {db, adminsTable, pingsTable, pingPermsTable} from "./db";
+import { db, adminsTable, pingsTable, pingPermsTable } from "./db";
 import { and, eq } from "drizzle-orm";
 import { LogSnag } from "@logsnag/node";
 import type Slack from "@slack/bolt";
@@ -46,7 +47,7 @@ async function sendPing(
   message: string,
   userId: string,
   channelId: string,
-  client: Slack.webApi.WebClient
+  client: Slack.webApi.WebClient,
 ) {
   let finalMessage: string;
   if (message.includes(`@${type}`)) {
@@ -116,7 +117,7 @@ async function pingCommand(
     respond,
     payload,
     client,
-  }: SlackCommandMiddlewareArgs & { client: Slack.webApi.WebClient }
+  }: SlackCommandMiddlewareArgs & { client: Slack.webApi.WebClient },
 ) {
   await ack();
   const rayId = generateRandomString(12);
@@ -124,7 +125,7 @@ async function pingCommand(
   const { text: message } = payload;
 
   try {
-    if (!await hasPerms(userId, channelId, client)) {
+    if (!(await hasPerms(userId, channelId, client))) {
       await respond({
         text: stripIndents`
           :tw_warning: *You need to be a channel manager to use this command.*
@@ -134,7 +135,7 @@ async function pingCommand(
         response_type: "ephemeral",
       });
       logger.debug(
-        `${rayId}: Failed to send ping: user ${userId} not admin or channel manager`
+        `${rayId}: Failed to send ping: user ${userId} not admin or channel manager`,
       );
       return;
     }
@@ -149,7 +150,7 @@ async function pingCommand(
       message,
       userId,
       botId as string,
-      e
+      e,
     );
     try {
       await respond({
@@ -165,15 +166,13 @@ async function pingCommand(
   }
 }
 
-async function addChannelPermsCommand(
-  {
-    command,
-    ack,
-    respond,
-    payload,
-    client,
-  }: SlackCommandMiddlewareArgs & { client: Slack.webApi.WebClient }
-) {
+async function addChannelPermsCommand({
+  command,
+  ack,
+  respond,
+  payload,
+  client,
+}: SlackCommandMiddlewareArgs & { client: Slack.webApi.WebClient }) {
   await ack();
   const rayId = generateRandomString(12);
   const { channel_id: channelId, user_id: userId } = command;
@@ -188,31 +187,31 @@ async function addChannelPermsCommand(
           text: `:tw_warning: *This is not a valid slack user!*
           Make sure to ping them, not just typing in their name!
           _If this is incorrect, please DM <@U059VC0UDEU>._`,
-          response_type: "ephemeral"
-        })
+          response_type: "ephemeral",
+        });
         return;
       }
       if (await hasPerms(targetId, channelId, client)) {
         await respond({
-          text: `:tw_x: ${target} can already ping in <#${channelId}>! Silly goose, go try it!`
-        })
+          text: `:tw_x: ${target} can already ping in <#${channelId}>! Silly goose, go try it!`,
+        });
         return;
       } else {
         await db.insert(pingPermsTable).values({
           slackId: targetId,
-          channelId: channelId
-        })
+          channelId: channelId,
+        });
         await respond({
-          text: `:tw_white_check_mark: ${target} is now allowed to ping in <#${channelId}>`
-        })
-        
+          text: `:tw_white_check_mark: ${target} is now allowed to ping in <#${channelId}>`,
+        });
+
         // Notify the target user about their new permissions
         await client.chat.postMessage({
           channel: targetId,
-          text: `:tw_bell: You have been granted permission to use @channel/@here in <#${channelId}> by <@${userId}>.`
+          text: `:tw_bell: You have been granted permission to use @channel/@here in <#${channelId}> by <@${userId}>.`,
         });
-        
-        logger.info(`${userId} gave ${targetId} ping perms in ${channelId}`)
+
+        logger.info(`${userId} gave ${targetId} ping perms in ${channelId}`);
         logsnag
           .track({
             channel: "perms",
@@ -225,8 +224,7 @@ async function addChannelPermsCommand(
               target_id: targetId,
             },
           })
-          .catch(() => {
-          })
+          .catch(() => {});
         return;
       }
     } else {
@@ -235,7 +233,7 @@ async function addChannelPermsCommand(
           If this is a private channel, you'll need to add <@${botId}> to the channel.
           _If this is incorrect, please DM <@U059VC0UDEU>._`,
         response_type: "ephemeral",
-      })
+      });
     }
   } catch (e) {
     console.log(e);
@@ -255,15 +253,13 @@ async function addChannelPermsCommand(
   }
 }
 
-async function removeChannelPermsCommand(
-  {
-    command,
-    ack,
-    respond,
-    payload,
-    client,
-  }: SlackCommandMiddlewareArgs & { client: Slack.webApi.WebClient }
-) {
+async function removeChannelPermsCommand({
+  command,
+  ack,
+  respond,
+  payload,
+  client,
+}: SlackCommandMiddlewareArgs & { client: Slack.webApi.WebClient }) {
   await ack();
   const rayId = generateRandomString(12);
   const { channel_id: channelId, user_id: userId } = command;
@@ -278,22 +274,29 @@ async function removeChannelPermsCommand(
           text: `:tw_warning: *This is not a valid slack user!*
           Make sure to ping them, not just typing in their name!
           _If this is incorrect, please DM <@U059VC0UDEU>._`,
-          response_type: "ephemeral"
+          response_type: "ephemeral",
         });
         return;
       }
       if (await hasPerms(targetId, channelId, client)) {
-        await db.delete(pingPermsTable).where(and(eq(pingPermsTable.slackId, targetId), eq(pingPermsTable.channelId, channelId)));
+        await db
+          .delete(pingPermsTable)
+          .where(
+            and(
+              eq(pingPermsTable.slackId, targetId),
+              eq(pingPermsTable.channelId, channelId),
+            ),
+          );
         await respond({
-          text: `:tw_white_check_mark: ${target} can no longer ping in <#${channelId}>!`
+          text: `:tw_white_check_mark: ${target} can no longer ping in <#${channelId}>!`,
         });
-        
+
         // Notify the target user that their permissions have been revoked
         await client.chat.postMessage({
           channel: targetId,
-          text: `:tw_bell: Your permission to use @channel/@here in <#${channelId}> has been revoked by <@${userId}>.`
+          text: `:tw_bell: Your permission to use @channel/@here in <#${channelId}> has been revoked by <@${userId}>.`,
         });
-        
+
         logger.info(`${userId} removed ${targetId} ping perms in ${channelId}`);
         logsnag
           .track({
@@ -311,7 +314,7 @@ async function removeChannelPermsCommand(
         return;
       } else {
         await respond({
-          text: `:tw_warning: ${target} does not have ping permissions in <#${channelId}>!`
+          text: `:tw_warning: ${target} does not have ping permissions in <#${channelId}>!`,
         });
         return;
       }
@@ -342,11 +345,11 @@ async function removeChannelPermsCommand(
 }
 
 async function listChannelPingersCommand({
-                                           command,
-                                           ack,
-                                           respond,
-                                           client
-                                         }: SlackCommandMiddlewareArgs & { client: Slack.webApi.WebClient }) {
+  command,
+  ack,
+  respond,
+  client,
+}: SlackCommandMiddlewareArgs & { client: Slack.webApi.WebClient }) {
   await ack();
   const rayId = generateRandomString(12);
   const { channel_id: channelId, user_id: userId } = command;
@@ -378,7 +381,9 @@ async function listChannelPingersCommand({
     }
 
     // Filter out any non-string values from userIds
-    const filteredUserIds = new Set(Array.from(userIds).filter((id): id is string => typeof id === "string"));
+    const filteredUserIds = new Set(
+      Array.from(userIds).filter((id): id is string => typeof id === "string"),
+    );
 
     if (filteredUserIds.size === 0) {
       await respond({
@@ -421,7 +426,7 @@ app.shortcut(
     const rayId = `delete-ping-${generateRandomString(12)}`;
     const userId = shortcut.user.id;
     logger.debug(
-      `${rayId}: ${userId} invoked delete_ping on ${shortcut.message_ts}`
+      `${rayId}: ${userId} invoked delete_ping on ${shortcut.message_ts}`,
     );
 
     const [claim] = await db
@@ -430,8 +435,8 @@ app.shortcut(
       .where(
         and(
           eq(pingsTable.ts, shortcut.message_ts),
-          eq(pingsTable.slackId, userId)
-        )
+          eq(pingsTable.slackId, userId),
+        ),
       );
 
     if (!claim) {
@@ -446,7 +451,7 @@ app.shortcut(
           response_type: "ephemeral",
         });
         logger.debug(
-          `${rayId}: Failed to delete ping: user ${userId} not sender`
+          `${rayId}: Failed to delete ping: user ${userId} not sender`,
         );
         return;
       }
@@ -489,7 +494,7 @@ app.shortcut(
         });
       }
     }
-  }
+  },
 );
 app.shortcut(
   { callback_id: "edit_ping", type: "message_action" },
@@ -498,7 +503,7 @@ app.shortcut(
     const rayId = `edit-ping-${generateRandomString(12)}`;
     const userId = shortcut.user.id;
     logger.debug(
-      `${rayId}: ${userId} invoked edit_ping on ${shortcut.message_ts}`
+      `${rayId}: ${userId} invoked edit_ping on ${shortcut.message_ts}`,
     );
 
     const [claim] = await db
@@ -507,8 +512,8 @@ app.shortcut(
       .where(
         and(
           eq(pingsTable.ts, shortcut.message_ts),
-          eq(pingsTable.slackId, userId)
-        )
+          eq(pingsTable.slackId, userId),
+        ),
       );
 
     if (!claim) {
@@ -523,7 +528,7 @@ app.shortcut(
           response_type: "ephemeral",
         });
         logger.debug(
-          `${rayId}: Failed to edit ping: user ${userId} not sender`
+          `${rayId}: Failed to edit ping: user ${userId} not sender`,
         );
         return;
       }
@@ -534,13 +539,13 @@ app.shortcut(
       userId,
       rayId,
       claim.ts,
-      claim.type
+      claim.type,
     );
     await client.views.open({
       trigger_id: shortcut.trigger_id,
       view: modal,
     });
-  }
+  },
 );
 
 app.view(
@@ -550,7 +555,7 @@ app.view(
     const { channelId, ts, type, rayId } = JSON.parse(view.private_metadata);
     const message = richTextBlockToMrkdwn(
       // biome-ignore lint/style/noNonNullAssertion: Will always be there - it's a required field
-      view.state.values.message.message_input.rich_text_value!
+      view.state.values.message.message_input.rich_text_value!,
     )
       .replaceAll("<!channel>", "@channel")
       .replaceAll("<!here>", "@here");
@@ -600,7 +605,7 @@ app.view(
         message,
         body.user.id,
         botId as string,
-        e
+        e,
       );
       try {
         await respond({
@@ -614,7 +619,7 @@ app.view(
         });
       }
     }
-  }
+  },
 );
 
 app.command(CHANNEL_COMMAND_NAME, pingCommand.bind(null, "channel"));

@@ -43,10 +43,7 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "pingPerms_slack_id_channel_id_pk": {
-          "columns": [
-            "slack_id",
-            "channel_id"
-          ],
+          "columns": ["slack_id", "channel_id"],
           "name": "pingPerms_slack_id_channel_id_pk"
         }
       },
@@ -82,10 +79,7 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "pings_slack_id_ts_pk": {
-          "columns": [
-            "slack_id",
-            "ts"
-          ],
+          "columns": ["slack_id", "ts"],
           "name": "pings_slack_id_ts_pk"
         }
       },
