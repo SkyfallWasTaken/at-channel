@@ -3,7 +3,7 @@
     "name": "at-channel",
     "description": "Run /channel or /here to do a @channel/@here ping!",
     "background_color": "#2051d6",
-    "long_description": "Run /channel or /here to do a @channel/@here ping!\r\nYou'll need to be a channel manager to run the commands.\r\n\r\nClosed source: DM @skyfall for repo access\r\nMade by @skyfall.\r\n\r\n\r\nContributors:\r\n@skyfall\r\n@sahana"
+    "long_description": "Run /channel or /here to do a @channel/@here ping!\r\nYou'll need to be a channel manager to run the commands.\r\n\r\nOpen source: https://github.com/SkyfallWasTaken/at-channel\r\nMade by @skyfall.\r\n\r\n\r\nContributors:\r\n@skyfall\r\n@sahana"
   },
   "features": {
     "bot_user": {
