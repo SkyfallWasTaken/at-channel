@@ -26,7 +26,7 @@ export function buildPingMessage(
   message: string,
   richText?: RichText,
 ) {
-  const token = `<!${type}>`;
+  const token = `<!${type}|${type}>`;
   const plain = `@${type}`;
   const withPlain = message.replaceAll(token, plain);
   const body = withPlain.includes(plain) ? withPlain : `${plain} ${withPlain}`;
