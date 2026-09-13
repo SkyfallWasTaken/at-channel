@@ -693,8 +693,8 @@ app.view(
       type,
     );
     const message = richTextBlockToMrkdwn(richText)
-      .replaceAll("<!channel>", "@channel")
-      .replaceAll("<!here>", "@here");
+      .replaceAll(/<!channel(?:\|channel)?>/g, "@channel")
+      .replaceAll(/<!here(?:\|here)?>/g, "@here");
     try {
       await Promise.all([
         client.chat.update({
@@ -774,7 +774,7 @@ async function loadMentionPing(
     .replaceAll(`<@${botId}>`, PING_PLACEHOLDER)
     .replace(/[ \t]{2,}/g, " ")
     .trim();
-  const type: "channel" | "here" = /<!here>|@here/.test(message)
+  const type: "channel" | "here" = /<!here(?:\|here)?>|@here/.test(message)
     ? "here"
     : "channel";
   const files = (original.files ?? []).flatMap((f) =>
