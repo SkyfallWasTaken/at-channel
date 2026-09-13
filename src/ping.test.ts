@@ -7,27 +7,28 @@ const bodyOf = (p: { blocks: unknown[] }) =>
 test("initial post carries the mention only inside an attachment", () => {
   const { initial } = buildPingMessage("channel", "hello world");
   expect(initial.text).toBe("@channel hello world");
-  expect(initial.attachments[0]?.blocks[0]?.text?.text).toBe("<!channel> hello world");
-  expect(JSON.stringify(initial).indexOf("<!")).toBe(JSON.stringify(initial).indexOf("<!channel>"));
+  expect(initial.attachments[0]?.blocks[0]?.text?.text).toBe("<!channel|channel> hello world");
+  expect(JSON.stringify(initial).indexOf("<!")).toBe(JSON.stringify(initial).indexOf("<!channel|channel>"));
 });
 
 test("final update has the token in a block, plain text, and clears the attachment", () => {
   const { final } = buildPingMessage("channel", "hello world");
   expect(final.text).toBe("@channel hello world");
-  expect(final.blocks).toEqual([{ type: "section", text: { type: "mrkdwn", text: "<!channel> hello world", verbatim: true } }]);
+  expect(final.blocks).toEqual([{ type: "section", text: { type: "mrkdwn", text: "<!channel|channel> hello world", verbatim: true } }]);
   expect(final.attachments).toEqual([]);
 });
 
-test("keeps an inline mention in place, in either spelling", () => {
-  expect(bodyOf(buildPingMessage("here", "hey @here folks").final)).toBe("hey <!here> folks");
-  expect(bodyOf(buildPingMessage("here", "hey <!here> folks").final)).toBe("hey <!here> folks");
+test("keeps an inline mention in place, in any spelling", () => {
+  expect(bodyOf(buildPingMessage("here", "hey @here folks").final)).toBe("hey <!here|here> folks");
+  expect(bodyOf(buildPingMessage("here", "hey <!here> folks").final)).toBe("hey <!here|here> folks");
+  expect(bodyOf(buildPingMessage("here", "hey <!here|here> folks").final)).toBe("hey <!here|here> folks");
 });
 
 test("rich text body replaces the section in the final payload only", () => {
   const rt = { type: "rich_text" as const, elements: [] };
   const { initial, final } = buildPingMessage("channel", "hi @channel", rt);
   expect(final.blocks[0]).toBe(rt);
-  expect(initial.attachments[0]?.blocks[0]?.text?.text).toBe("hi <!channel>");
+  expect(initial.attachments[0]?.blocks[0]?.text?.text).toBe("hi <!channel|channel>");
 });
 
 test("richTextWithBroadcast swaps the bot mention in place and keeps other elements", () => {

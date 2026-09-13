@@ -2,8 +2,9 @@ import type Slack from "@slack/bolt";
 
 // Slack now strips <!channel>/<!here> from a bot's chat.postMessage `text`,
 // `blocks`, and rich_text broadcast elements: they are downgraded to plain
-// "@channel" and notify nobody. The one place the mention still fires a
-// notification at post time is inside legacy `attachments`.
+// "@channel" and notify nobody. Mentions must carry a label —
+// <!channel|channel> — and even that only still notifies from legacy
+// `attachments` at post time.
 //
 // chat.update accepts the token in `blocks` (but rejects it in `text` with
 // `cant_update_message`) and never re-notifies. So a ping is posted with the
@@ -26,9 +27,13 @@ export function buildPingMessage(
   message: string,
   richText?: RichText,
 ) {
-  const token = `<!${type}>`;
+  // New spelling: Slack requires a label suffix, <!channel|channel>.
+  const token = `<!${type}|${type}>`;
+  // Old spellings users may still type: <!channel> and @channel.
   const plain = `@${type}`;
-  const withPlain = message.replaceAll(token, plain);
+  const withPlain = message
+    .replaceAll(token, plain)
+    .replaceAll(`<!${type}>`, plain);
   const body = withPlain.includes(plain) ? withPlain : `${plain} ${withPlain}`;
   const withToken = body.replaceAll(plain, token);
   const bodyBlock: Block = richText ?? section(withToken);
